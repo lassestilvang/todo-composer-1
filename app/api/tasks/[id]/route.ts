@@ -160,6 +160,13 @@ export async function PATCH(
         | TaskWithRelations
         | undefined;
 
+      if (!result) {
+        return NextResponse.json(
+          { error: "Task not found after update" },
+          { status: 404 }
+        );
+      }
+
       // Update labels if provided
       if (body.labels !== undefined) {
         db.prepare("DELETE FROM task_labels WHERE task_id = ?").run(id);
