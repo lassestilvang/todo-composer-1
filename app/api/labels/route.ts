@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { Label } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -33,11 +34,12 @@ export async function POST(request: Request) {
 
     const newLabel = db
       .prepare("SELECT * FROM labels WHERE id = ?")
-      .get(result.lastInsertRowid) as any;
+      .get(result.lastInsertRowid) as Label | undefined;
 
     return NextResponse.json(newLabel, { status: 201 });
-  } catch (error: any) {
-    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+  } catch (error) {
+    const dbError = error as { code?: string };
+    if (dbError.code === "SQLITE_CONSTRAINT_UNIQUE") {
       return NextResponse.json(
         { error: "Label with this name already exists" },
         { status: 409 }

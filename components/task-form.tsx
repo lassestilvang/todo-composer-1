@@ -1,16 +1,11 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import {
-  TaskWithRelations,
-  Priority,
-  RecurringType,
-  List,
-  Label,
-} from "@/lib/types";
+import { TaskWithRelations, List, Label } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,7 +71,6 @@ export function TaskForm({
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    setValue,
   } = useForm<TaskFormData>({
     resolver: zodResolver(taskSchema),
     defaultValues: {
@@ -103,24 +97,24 @@ export function TaskForm({
         recurring_config: task.recurring_config || "",
       });
 
-      if (task.estimate_minutes) {
-        const hours = Math.floor(task.estimate_minutes / 60);
-        const minutes = task.estimate_minutes % 60;
-        setEstimateTime(
-          `${hours.toString().padStart(2, "0")}:${minutes
-            .toString()
-            .padStart(2, "0")}`
-        );
+      const toTimeString = (totalMinutes: number) => {
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        return `${hours.toString().padStart(2, "0")}:${minutes
+          .toString()
+          .padStart(2, "0")}`;
+      };
+
+      if (typeof task.estimate_minutes === "number") {
+        setEstimateTime(toTimeString(task.estimate_minutes));
+      } else {
+        setEstimateTime("00:00");
       }
 
-      if (task.actual_minutes) {
-        const hours = Math.floor(task.actual_minutes / 60);
-        const minutes = task.actual_minutes % 60;
-        setActualTime(
-          `${hours.toString().padStart(2, "0")}:${minutes
-            .toString()
-            .padStart(2, "0")}`
-        );
+      if (typeof task.actual_minutes === "number") {
+        setActualTime(toTimeString(task.actual_minutes));
+      } else {
+        setActualTime("00:00");
       }
 
       setSelectedLabels(task.labels?.map((l) => l.id) || []);

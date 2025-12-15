@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { TaskWithRelations } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     `;
 
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: unknown[] = [];
 
     if (listId) {
       conditions.push("t.list_id = ?");
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     query +=
       " ORDER BY t.position IS NULL, t.position ASC, t.date ASC, t.created_at DESC";
 
-    const tasks = db.prepare(query).all(...params) as any[];
+    const tasks = db.prepare(query).all(...params) as TaskWithRelations[];
 
     // Fetch labels and subtasks for each task
     const tasksWithRelations = tasks.map((task) => {
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
 
     const task = db
       .prepare("SELECT * FROM tasks WHERE id = ?")
-      .get(result.lastInsertRowid) as any;
+      .get(result.lastInsertRowid) as TaskWithRelations | undefined;
 
     // Add labels
     if (labels && Array.isArray(labels)) {

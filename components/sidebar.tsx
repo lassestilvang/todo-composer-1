@@ -50,14 +50,9 @@ export function Sidebar({
   const { count: overdueCount } = useOverdue();
   const { theme, setTheme } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const isDarkMode = () => {
-    if (!isMounted || typeof window === "undefined") return false;
+    if (typeof window === "undefined") return false;
     if (theme === "system") {
       return window.matchMedia("(prefers-color-scheme: dark)").matches;
     }

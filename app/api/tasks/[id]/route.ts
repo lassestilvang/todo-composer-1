@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { TaskWithRelations } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -8,7 +9,9 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as any;
+    const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as
+      | TaskWithRelations
+      | undefined;
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -41,7 +44,7 @@ export async function GET(
       subtasks,
       changes,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to fetch task" },
       { status: 500 }
@@ -82,7 +85,9 @@ export async function PATCH(
       body.position = parsedPosition;
     }
 
-    const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as any;
+    const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as
+      | TaskWithRelations
+      | undefined;
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -106,16 +111,18 @@ export async function PATCH(
     ];
 
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: unknown[] = [];
 
     // Track changes for logging
     const logChanges = db.prepare(
       "INSERT INTO task_changes (task_id, field_name, old_value, new_value) VALUES (?, ?, ?, ?)"
     );
 
+    const taskRecord = task as unknown as Record<string, unknown>;
+
     for (const field of fields) {
       if (field in body) {
-        const oldValue = task[field];
+        const oldValue = taskRecord[field];
         // Normalize empty string recurring_type to null for consistency with POST
         const newValue =
           field === "recurring_type" && body[field] === "" ? null : body[field];
@@ -149,9 +156,9 @@ export async function PATCH(
         ...values
       );
 
-      const result = db
-        .prepare("SELECT * FROM tasks WHERE id = ?")
-        .get(id) as any;
+      const result = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as
+        | TaskWithRelations
+        | undefined;
 
       // Update labels if provided
       if (body.labels !== undefined) {
@@ -202,7 +209,7 @@ export async function DELETE(
     const { id } = await params;
     db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to delete task" },
       { status: 500 }

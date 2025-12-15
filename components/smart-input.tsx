@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useRef, useImperativeHandle, forwardRef, FormEvent } from "react";
+import {
+  useState,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+  FormEvent,
+} from "react";
 import * as chrono from "chrono-node";
 import { List } from "@/lib/types";
 import { Input } from "@/components/ui/input";
@@ -10,10 +16,17 @@ export interface SmartInputHandle {
   focus: () => void;
 }
 
+interface ParsedTaskInput {
+  list_id: number;
+  name: string;
+  date: string | null;
+  priority: "high" | "medium" | "low" | "none";
+}
+
 interface SmartInputProps {
   lists: List[];
   currentListId: number | null;
-  onCreateTask: (data: any) => Promise<void>;
+  onCreateTask: (data: ParsedTaskInput) => Promise<void>;
 }
 
 export const SmartInput = forwardRef<SmartInputHandle, SmartInputProps>(
@@ -28,7 +41,7 @@ export const SmartInput = forwardRef<SmartInputHandle, SmartInputProps>(
       },
     }));
 
-    const parseInput = (raw: string) => {
+    const parseInput = (raw: string): ParsedTaskInput => {
       let text = raw.trim();
       let listId = currentListId ?? 1;
       let priority: "high" | "medium" | "low" | "none" = "none";

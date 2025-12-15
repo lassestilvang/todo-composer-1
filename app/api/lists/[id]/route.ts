@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { List } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -7,7 +8,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const list = db.prepare("SELECT * FROM lists WHERE id = ?").get(id);
+    const list = db
+      .prepare("SELECT * FROM lists WHERE id = ?")
+      .get(id) as List | undefined;
 
     if (!list) {
       return NextResponse.json({ error: "List not found" }, { status: 404 });
@@ -32,7 +35,7 @@ export async function PATCH(
     const { name, color, emoji } = body;
 
     const updates: string[] = [];
-    const values: any[] = [];
+    const values: (string | number)[] = [];
 
     if (name !== undefined) {
       updates.push("name = ?");
@@ -60,7 +63,7 @@ export async function PATCH(
 
     const result = db
       .prepare("SELECT * FROM lists WHERE id = ?")
-      .get(id) as any;
+      .get(id) as List | undefined;
 
     return NextResponse.json(result);
   } catch (error) {

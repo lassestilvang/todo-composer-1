@@ -73,7 +73,22 @@ export default function Home() {
     setCurrentListId(null);
   };
 
-  const handleCreateTask = async (data: any) => {
+  const handleCreateTask = async (data: {
+    list_id: number;
+    name: string;
+    description?: string | null;
+    date?: string | null;
+    deadline?: string | null;
+    reminder?: string | null;
+    estimate_minutes?: number | null;
+    actual_minutes?: number | null;
+    priority?: string;
+    recurring_type?: string | null;
+    recurring_config?: string | null;
+    attachment_path?: string | null;
+    labels?: number[];
+    subtasks?: { name: string }[];
+  }) => {
     // Optimistic update
     const tempId = Math.random() * -1000000;
     const optimisticTask = {
@@ -206,7 +221,11 @@ export default function Home() {
     setTaskFormOpen(true);
   };
 
-  const handleCreateList = async (data: any) => {
+  const handleCreateList = async (data: {
+    name: string;
+    color: string;
+    emoji: string;
+  }) => {
     await fetch("/api/lists", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -216,7 +235,11 @@ export default function Home() {
     refetchLists();
   };
 
-  const handleCreateLabel = async (data: any) => {
+  const handleCreateLabel = async (data: {
+    name: string;
+    color: string;
+    emoji: string;
+  }) => {
     await fetch("/api/labels", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

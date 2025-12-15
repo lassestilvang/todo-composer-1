@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { List } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
 
     const newList = db
       .prepare("SELECT * FROM lists WHERE id = ?")
-      .get(result.lastInsertRowid) as any;
+      .get(result.lastInsertRowid) as List | undefined;
 
     return NextResponse.json(newList, { status: 201 });
   } catch (error) {
