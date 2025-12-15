@@ -13,35 +13,6 @@ const db = new Database(dbPath);
 // Enable foreign keys
 db.pragma("foreign_keys = ON");
 
-// Ensure new columns exist for existing databases
-const taskColumns = db
-  .prepare("PRAGMA table_info(tasks)")
-  .all() as { name: string }[];
-
-const hasPositionColumn = taskColumns.some((col) => col.name === "position");
-
-if (!hasPositionColumn) {
-  // Add position column and backfill existing tasks with a sensible default
-  db.exec(`
-    ALTER TABLE tasks ADD COLUMN position REAL;
-  `);
-
-  // Initialize position based on current ordering (by created_at)
-  const existingTasks = db
-    .prepare("SELECT id FROM tasks ORDER BY created_at ASC, id ASC")
-    .all() as { id: number }[];
-
-  const updatePosition = db.prepare(
-    "UPDATE tasks SET position = ? WHERE id = ?"
-  );
-
-  let pos = 1;
-  for (const task of existingTasks) {
-    updatePosition.run(pos, task.id);
-    pos += 1;
-  }
-}
-
 // Create tables
 db.exec(`
   CREATE TABLE IF NOT EXISTS lists (
@@ -75,7 +46,7 @@ db.exec(`
     recurring_type TEXT,
     recurring_config TEXT,
     attachment_path TEXT,
-    position REAL,
+    position INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0 AND position <= 10000),
     completed INTEGER NOT NULL DEFAULT 0,
     completed_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -119,6 +90,36 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_task_labels_task_id ON task_labels(task_id);
   CREATE INDEX IF NOT EXISTS idx_task_changes_task_id ON task_changes(task_id);
 `);
+
+// Ensure new columns exist or are backfilled for existing databases
+const taskColumns = db
+  .prepare("PRAGMA table_info(tasks)")
+  .all() as { name: string }[];
+
+const hasPositionColumn = taskColumns.some((col) => col.name === "position");
+
+if (!hasPositionColumn) {
+  // Add position column and backfill existing tasks with a sensible default
+  db.exec(`
+    ALTER TABLE tasks
+    ADD COLUMN position INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0 AND position <= 10000);
+  `);
+
+  // Initialize position based on current ordering (by created_at)
+  const existingTasks = db
+    .prepare("SELECT id FROM tasks ORDER BY created_at ASC, id ASC")
+    .all() as { id: number }[];
+
+  const updatePosition = db.prepare(
+    "UPDATE tasks SET position = ? WHERE id = ?"
+  );
+
+  let pos = 1;
+  for (const task of existingTasks) {
+    updatePosition.run(pos, task.id);
+    pos += 1;
+  }
+}
 
 // Initialize default "Inbox" list if it doesn't exist
 const inboxExists = db.prepare("SELECT id FROM lists WHERE id = 1").get();

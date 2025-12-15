@@ -54,8 +54,33 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const MAX_POSITION = 10_000;
+
     const { id } = await params;
     const body = await request.json();
+
+    // Validate and normalize "position" if provided
+    if (body.position !== undefined) {
+      const rawPosition = body.position;
+      const parsedPosition =
+        typeof rawPosition === "number"
+          ? rawPosition
+          : parseInt(String(rawPosition), 10);
+
+      if (
+        !Number.isFinite(parsedPosition) ||
+        !Number.isInteger(parsedPosition) ||
+        parsedPosition < 0 ||
+        parsedPosition > MAX_POSITION
+      ) {
+        return NextResponse.json(
+          { error: "Invalid position value" },
+          { status: 400 }
+        );
+      }
+
+      body.position = parsedPosition;
+    }
 
     const task = db.prepare("SELECT * FROM tasks WHERE id = ?").get(id) as any;
 
