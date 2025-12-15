@@ -90,7 +90,9 @@ export async function PATCH(
     for (const field of fields) {
       if (field in body) {
         const oldValue = task[field];
-        const newValue = body[field];
+        // Normalize empty string recurring_type to null for consistency with POST
+        const newValue =
+          field === "recurring_type" && body[field] === "" ? null : body[field];
 
         if (oldValue !== newValue) {
           updates.push(`${field} = ?`);
@@ -117,9 +119,9 @@ export async function PATCH(
       updates.push("updated_at = datetime('now')");
       values.push(id);
 
-      db.prepare(
-        `UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`
-      ).run(...values);
+      db.prepare(`UPDATE tasks SET ${updates.join(", ")} WHERE id = ?`).run(
+        ...values
+      );
 
       const result = db
         .prepare("SELECT * FROM tasks WHERE id = ?")

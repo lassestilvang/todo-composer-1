@@ -4,7 +4,13 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { TaskWithRelations, Priority, RecurringType, List, Label } from "@/lib/types";
+import {
+  TaskWithRelations,
+  Priority,
+  RecurringType,
+  List,
+  Label,
+} from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,7 +36,11 @@ const taskSchema = z.object({
   estimate_minutes: z.number().optional(),
   actual_minutes: z.number().optional(),
   priority: z.enum(["high", "medium", "low", "none"]),
-  recurring_type: z.enum(["daily", "weekly", "weekday", "monthly", "yearly", "custom"]).nullable().optional(),
+  recurring_type: z
+    .enum(["daily", "weekly", "weekday", "monthly", "yearly", "custom"])
+    .nullable()
+    .optional()
+    .or(z.literal("")),
   recurring_config: z.string().optional(),
   labels: z.array(z.number()).optional(),
   subtasks: z.array(z.object({ name: z.string() })).optional(),
@@ -96,13 +106,21 @@ export function TaskForm({
       if (task.estimate_minutes) {
         const hours = Math.floor(task.estimate_minutes / 60);
         const minutes = task.estimate_minutes % 60;
-        setEstimateTime(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`);
+        setEstimateTime(
+          `${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}`
+        );
       }
 
       if (task.actual_minutes) {
         const hours = Math.floor(task.actual_minutes / 60);
         const minutes = task.actual_minutes % 60;
-        setActualTime(`${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`);
+        setActualTime(
+          `${hours.toString().padStart(2, "0")}:${minutes
+            .toString()
+            .padStart(2, "0")}`
+        );
       }
 
       setSelectedLabels(task.labels?.map((l) => l.id) || []);
@@ -126,7 +144,9 @@ export function TaskForm({
   const onFormSubmit = async (data: TaskFormData) => {
     const submitData = {
       ...data,
-      estimate_minutes: estimateTime ? parseTimeToMinutes(estimateTime) : undefined,
+      estimate_minutes: estimateTime
+        ? parseTimeToMinutes(estimateTime)
+        : undefined,
       actual_minutes: actualTime ? parseTimeToMinutes(actualTime) : undefined,
       labels: selectedLabels,
       subtasks,
@@ -159,7 +179,9 @@ export function TaskForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass-strong">
         <DialogHeader>
-          <DialogTitle className="text-2xl">{task ? "Edit Task" : "Create Task"}</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {task ? "Edit Task" : "Create Task"}
+          </DialogTitle>
           <DialogDescription className="text-base">
             {task ? "Update task details" : "Add a new task to your list"}
           </DialogDescription>
@@ -171,19 +193,26 @@ export function TaskForm({
             <label className="text-sm font-semibold mb-2 block">Name *</label>
             <Input {...register("name")} className="mt-2 h-11" />
             {errors.name && (
-              <p className="text-sm text-destructive mt-2">{errors.name.message}</p>
+              <p className="text-sm text-destructive mt-2">
+                {errors.name.message}
+              </p>
             )}
           </div>
 
           <div>
-            <label className="text-sm font-semibold mb-2 block">Description</label>
+            <label className="text-sm font-semibold mb-2 block">
+              Description
+            </label>
             <Textarea {...register("description")} className="mt-2" rows={4} />
           </div>
 
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-semibold mb-2 block">List</label>
-              <Select {...register("list_id", { valueAsNumber: true })} className="mt-2 h-11">
+              <Select
+                {...register("list_id", { valueAsNumber: true })}
+                className="mt-2 h-11"
+              >
                 {lists.map((list) => (
                   <option key={list.id} value={list.id}>
                     {list.emoji} {list.name}
@@ -193,7 +222,9 @@ export function TaskForm({
             </div>
 
             <div>
-              <label className="text-sm font-semibold mb-2 block">Priority</label>
+              <label className="text-sm font-semibold mb-2 block">
+                Priority
+              </label>
               <Select {...register("priority")} className="mt-2 h-11">
                 <option value="none">None</option>
                 <option value="low">Low</option>
@@ -206,15 +237,13 @@ export function TaskForm({
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-semibold mb-2 block">Date</label>
-              <Input
-                type="date"
-                {...register("date")}
-                className="mt-2 h-11"
-              />
+              <Input type="date" {...register("date")} className="mt-2 h-11" />
             </div>
 
             <div>
-              <label className="text-sm font-semibold mb-2 block">Deadline</label>
+              <label className="text-sm font-semibold mb-2 block">
+                Deadline
+              </label>
               <Input
                 type="date"
                 {...register("deadline")}
@@ -225,7 +254,9 @@ export function TaskForm({
 
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-semibold mb-2 block">Estimate (HH:mm)</label>
+              <label className="text-sm font-semibold mb-2 block">
+                Estimate (HH:mm)
+              </label>
               <Input
                 type="time"
                 value={estimateTime}
@@ -235,7 +266,9 @@ export function TaskForm({
             </div>
 
             <div>
-              <label className="text-sm font-semibold mb-2 block">Actual (HH:mm)</label>
+              <label className="text-sm font-semibold mb-2 block">
+                Actual (HH:mm)
+              </label>
               <Input
                 type="time"
                 value={actualTime}
@@ -255,7 +288,9 @@ export function TaskForm({
           </div>
 
           <div>
-            <label className="text-sm font-semibold mb-2 block">Recurring</label>
+            <label className="text-sm font-semibold mb-2 block">
+              Recurring
+            </label>
             <Select {...register("recurring_type")} className="mt-2 h-11">
               <option value="">None</option>
               <option value="daily">Every day</option>
