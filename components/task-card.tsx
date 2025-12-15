@@ -36,6 +36,8 @@ interface TaskCardProps {
   onEdit: (task: TaskWithRelations) => void;
   onDelete: (taskId: number) => void;
   onSubtaskToggle?: (taskId: number, subtaskId: number, completed: boolean) => void;
+  selected?: boolean;
+  onSelect?: () => void;
 }
 
 const priorityColors: Record<Priority, string> = {
@@ -58,6 +60,8 @@ export function TaskCard({
   onEdit,
   onDelete,
   onSubtaskToggle,
+  selected = false,
+  onSelect,
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -101,10 +105,12 @@ export function TaskCard({
       }}
       whileHover={{ y: -4, scale: 1.01 }}
       className="card"
+      onClick={onSelect}
     >
       <Card
         className={cn(
           "glass p-6 transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-primary/10",
+          selected && "ring-2 ring-primary/70",
           task.completed && "completed opacity-70"
         )}
       >

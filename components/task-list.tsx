@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, Reorder } from "framer-motion";
 import { TaskWithRelations } from "@/lib/types";
 import { TaskCard } from "@/components/task-card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,9 @@ interface TaskListProps {
   onEdit: (task: TaskWithRelations) => void;
   onDelete: (taskId: number) => void;
   onSubtaskToggle?: (taskId: number, subtaskId: number, completed: boolean) => void;
+  onReorder?: (tasks: TaskWithRelations[]) => void;
+  selectedTaskId?: number | null;
+  onSelectTask?: (taskId: number) => void;
 }
 
 export function TaskList({
@@ -22,6 +25,9 @@ export function TaskList({
   onEdit,
   onDelete,
   onSubtaskToggle,
+  onReorder,
+  selectedTaskId,
+  onSelectTask,
 }: TaskListProps) {
   if (loading) {
     return (
@@ -60,30 +66,45 @@ export function TaskList({
   return (
     <ScrollArea className="h-full">
       <div className="space-y-4 p-6">
-        <AnimatePresence mode="popLayout">
-          {tasks.map((task, index) => (
-            <motion.div
-              key={task.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 25,
-                delay: index * 0.05,
-              }}
-            >
-              <TaskCard
-                task={task}
-                onToggleComplete={onToggleComplete}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onSubtaskToggle={onSubtaskToggle}
-              />
-            </motion.div>
-          ))}
-        </AnimatePresence>
+        <Reorder.Group
+          axis="y"
+          values={tasks}
+          onReorder={(newOrder) => {
+            onReorder?.(newOrder as TaskWithRelations[]);
+          }}
+        >
+          <AnimatePresence mode="popLayout">
+            {tasks.map((task, index) => (
+              <Reorder.Item
+                key={task.id}
+                value={task}
+                as="div"
+              >
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 25,
+                    delay: index * 0.05,
+                  }}
+                >
+                  <TaskCard
+                    task={task}
+                    onToggleComplete={onToggleComplete}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onSubtaskToggle={onSubtaskToggle}
+                    selected={task.id === selectedTaskId}
+                    onSelect={() => onSelectTask?.(task.id)}
+                  />
+                </motion.div>
+              </Reorder.Item>
+            ))}
+          </AnimatePresence>
+        </Reorder.Group>
       </div>
     </ScrollArea>
   );

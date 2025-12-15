@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { TaskWithRelations, ViewType } from "@/lib/types";
 
 export function useTasks(
@@ -78,5 +78,5 @@ export function useTasks(
       });
   };
 
-  return { tasks, loading, error, refetch };
+  return { tasks, setTasks, loading, error, refetch };
 }

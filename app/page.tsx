@@ -14,6 +14,9 @@ import { Plus } from "lucide-react";
 import { useTasks } from "@/hooks/use-tasks";
 import { useLists } from "@/hooks/use-lists";
 import { useLabels } from "@/hooks/use-labels";
+import { SmartInput, SmartInputHandle } from "@/components/smart-input";
+import { useKeyboardNav } from "@/hooks/use-keyboard-nav";
+import { useRef } from "react";
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType | null>("today");
   const [currentListId, setCurrentListId] = useState<number | null>(null);
@@ -31,6 +34,7 @@ export default function Home() {
   const { labels, refetch: refetchLabels } = useLabels();
   const {
     tasks,
+    setTasks,
     loading,
     refetch: refetchTasks,
   } = useTasks(
@@ -40,6 +44,16 @@ export default function Home() {
     searchQuery || undefined,
     currentLabelId || undefined
   );
+
+  const smartInputRef = useRef<SmartInputHandle | null>(null);
+
+  const { selectedTaskId, setSelectedTaskId } = useKeyboardNav({
+    tasks,
+    onToggleComplete: (taskId, completed) =>
+      handleToggleComplete(taskId, completed, { optimisticOnly: true }),
+    onDeleteTask: (taskId) => handleDeleteTask(taskId, { skipConfirm: true }),
+    onCreateTaskShortcut: () => smartInputRef.current?.focus(),
+  });
 
   const handleViewChange = (view: ViewType) => {
     setCurrentView(view);
@@ -60,20 +74,67 @@ export default function Home() {
   };
 
   const handleCreateTask = async (data: any) => {
+    // Optimistic update
+    const tempId = Math.random() * -1000000;
+    const optimisticTask = {
+      id: tempId,
+      list_id: data.list_id || currentListId || 1,
+      name: data.name,
+      description: data.description || null,
+      date: data.date || null,
+      deadline: data.deadline || null,
+      reminder: data.reminder || null,
+      estimate_minutes: data.estimate_minutes ?? null,
+      actual_minutes: data.actual_minutes ?? null,
+      priority: data.priority || "none",
+      recurring_type: data.recurring_type || null,
+      recurring_config: data.recurring_config || null,
+      attachment_path: data.attachment_path || null,
+      position: null,
+      completed: 0,
+      completed_at: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      labels: [],
+      subtasks: [],
+    } as TaskWithRelations;
+
+    setTasks((prev) => [optimisticTask, ...prev]);
+
     const url = editingTask ? `/api/tasks/${editingTask.id}` : "/api/tasks";
     const method = editingTask ? "PATCH" : "POST";
 
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      await refetchTasks();
+    } finally {
+      // Remove the optimistic placeholder if it still exists
+      setTasks((prev) => prev.filter((t) => t.id !== tempId));
+    }
 
-    refetchTasks();
     setEditingTask(null);
   };
 
-  const handleToggleComplete = async (taskId: number, completed: boolean) => {
+  const handleToggleComplete = async (
+    taskId: number,
+    completed: boolean,
+    options?: { optimisticOnly?: boolean }
+  ) => {
+    // Optimistic UI update
+    setTasks((prev) =>
+      prev.map((task) =>
+        task.id === taskId ? { ...task, completed: completed ? 1 : 0 } : task
+      )
+    );
+
+    if (options?.optimisticOnly) {
+      return;
+    }
+
     await fetch(`/api/tasks/${taskId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -104,14 +165,40 @@ export default function Home() {
     refetchTasks();
   };
 
-  const handleDeleteTask = async (taskId: number) => {
-    if (confirm("Are you sure you want to delete this task?")) {
-      await fetch(`/api/tasks/${taskId}`, {
-        method: "DELETE",
-      });
-
-      refetchTasks();
+  const handleDeleteTask = async (
+    taskId: number,
+    options?: { skipConfirm?: boolean }
+  ) => {
+    if (!options?.skipConfirm) {
+      const confirmed = confirm("Are you sure you want to delete this task?");
+      if (!confirmed) return;
     }
+
+    // Optimistic removal
+    setTasks((prev) => prev.filter((task) => task.id !== taskId));
+
+    await fetch(`/api/tasks/${taskId}`, {
+      method: "DELETE",
+    });
+
+    refetchTasks();
+  };
+
+  const handleReorderTasks = async (orderedTasks: TaskWithRelations[]) => {
+    setTasks(orderedTasks);
+
+    // Persist new positions
+    await Promise.all(
+      orderedTasks.map((task, index) =>
+        fetch(`/api/tasks/${task.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ position: index + 1 }),
+        })
+      )
+    );
+
+    refetchTasks();
   };
 
   const handleEditTask = (task: TaskWithRelations) => {
@@ -227,20 +314,28 @@ export default function Home() {
             </Button>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="flex-1">
-              <Search value={searchQuery} onChange={setSearchQuery} />
+          <div className="space-y-4">
+            <SmartInput
+              ref={smartInputRef}
+              lists={lists}
+              currentListId={currentListId}
+              onCreateTask={handleCreateTask}
+            />
+            <div className="flex items-center gap-6">
+              <div className="flex-1">
+                <Search value={searchQuery} onChange={setSearchQuery} />
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <Checkbox
+                  checked={showCompleted}
+                  onChange={(e) => setShowCompleted(e.target.checked)}
+                  className="group-hover:scale-110 transition-transform"
+                />
+                <span className="text-sm font-medium group-hover:text-foreground transition-colors">
+                  Show completed
+                </span>
+              </label>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer group">
-              <Checkbox
-                checked={showCompleted}
-                onChange={(e) => setShowCompleted(e.target.checked)}
-                className="group-hover:scale-110 transition-transform"
-              />
-              <span className="text-sm font-medium group-hover:text-foreground transition-colors">
-                Show completed
-              </span>
-            </label>
           </div>
         </header>
 
@@ -248,10 +343,15 @@ export default function Home() {
           <TaskList
             tasks={tasks}
             loading={loading}
-            onToggleComplete={handleToggleComplete}
+            onToggleComplete={(taskId, completed) =>
+              handleToggleComplete(taskId, completed)
+            }
             onEdit={handleEditTask}
             onDelete={handleDeleteTask}
             onSubtaskToggle={handleSubtaskToggle}
+            onReorder={handleReorderTasks}
+            selectedTaskId={selectedTaskId}
+            onSelectTask={setSelectedTaskId}
           />
         </main>
       </div>

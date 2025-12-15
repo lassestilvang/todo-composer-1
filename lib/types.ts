@@ -48,6 +48,7 @@ export interface Task {
   recurring_type: RecurringType;
   recurring_config: string | null;
   attachment_path: string | null;
+  position: number | null;
   completed: number;
   completed_at: string | null;
   created_at: string;

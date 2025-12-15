@@ -76,6 +76,7 @@ export async function PATCH(
       "recurring_type",
       "recurring_config",
       "attachment_path",
+      "position",
       "completed",
     ];
 

@@ -54,7 +54,9 @@ export async function GET(request: Request) {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += " ORDER BY t.date ASC, t.created_at DESC";
+    // Order primarily by explicit position within a list, falling back to date/created_at
+    query +=
+      " ORDER BY t.position IS NULL, t.position ASC, t.date ASC, t.created_at DESC";
 
     const tasks = db.prepare(query).all(...params) as any[];
 
@@ -116,16 +118,27 @@ export async function POST(request: Request) {
       );
     }
 
+    const targetListId = list_id || 1;
+
+    // Compute the next position within the target list
+    const { maxPosition } = db
+      .prepare(
+        "SELECT MAX(position) as maxPosition FROM tasks WHERE list_id = ?"
+      )
+      .get(targetListId) as { maxPosition: number | null };
+
+    const nextPosition = (maxPosition ?? 0) + 1;
+
     const result = db
       .prepare(
         `INSERT INTO tasks (
           list_id, name, description, date, deadline, reminder,
           estimate_minutes, actual_minutes, priority, recurring_type,
-          recurring_config, attachment_path
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          recurring_config, attachment_path, position
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
-        list_id || 1,
+        targetListId,
         name,
         description || null,
         date || null,
@@ -136,7 +149,8 @@ export async function POST(request: Request) {
         priority || "none",
         recurring_type || null,
         recurring_config || null,
-        attachment_path || null
+        attachment_path || null,
+        nextPosition
       );
 
     const task = db
